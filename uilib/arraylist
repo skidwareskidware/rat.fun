@@ -15,7 +15,7 @@ local ArrayList = {
 }
 
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-ScreenGui.Name = "rat.fun_ArrayList"
+ScreenGui.Name = "Custom_ArrayList_UI"
 
 local Container = Instance.new("Frame", ScreenGui)
 Container.BackgroundTransparency = 1
