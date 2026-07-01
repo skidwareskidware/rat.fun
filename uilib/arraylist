@@ -2,7 +2,7 @@ local ArrayList = {
     Entries = {},
     Config = {
         Visible = true,
-        Side = "Right", -- "Left" or "Right"
+        Side = "Right",
         Font = Enum.Font.BuilderSansMedium,
         TextSize = 14
     }
@@ -12,14 +12,62 @@ local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 ScreenGui.Name = "rat.fun_ArrayList"
 
 local Container = Instance.new("Frame", ScreenGui)
-Container.Size = UDim2.new(0, 200, 1, 0)
-Container.Position = UDim2.new(1, -205, 0, 5)
+Container.Size = UDim2.new(0, 220, 1, 0)
+Container.Position = UDim2.new(1, -225, 0, 5)
 Container.BackgroundTransparency = 1
+
+local RightBorderLine = Instance.new("Frame", ScreenGui)
+RightBorderLine.Size = UDim2.new(0, 3, 1, 0)
+RightBorderLine.Position = UDim2.new(1, -5, 0, 0)
+RightBorderLine.BorderSizePixel = 0
+RightBorderLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+RightBorderLine.BackgroundTransparency = 1
+
+local UIGradient = Instance.new("UIGradient", RightBorderLine)
+UIGradient.Rotation = 90
 
 local UIListLayout = Instance.new("UIListLayout", Container)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-UIListLayout.Padding = UDim.new(0, 2)
+UIListLayout.Padding = UDim.new(0, 0)
+
+local function updateRainbowLine()
+    local sorted = {}
+    for _, label in pairs(ArrayList.Entries) do
+        table.insert(sorted, label)
+    end
+    table.sort(sorted, function(a, b)
+        return a.LayoutOrder < b.LayoutOrder
+    end)
+    
+    if #sorted == 0 then 
+        RightBorderLine.BackgroundTransparency = 1
+        return 
+    end
+    
+    RightBorderLine.BackgroundTransparency = 0
+    local keypoints = {}
+    local step = 1 / math.max(#sorted - 1, 1)
+    
+    for i, label in ipairs(sorted) do
+        local timePos = (i - 1) * step
+        timePos = math.clamp(timePos, 0, 1)
+        table.insert(keypoints, ColorSequenceKeypoint.new(timePos, label.TextColor3))
+    end
+    
+    if #keypoints == 1 then
+        table.insert(keypoints, ColorSequenceKeypoint.new(1, keypoints[1].Value))
+    end
+    
+    UIGradient.Color = ColorSequence.new(keypoints)
+    
+    local totalHeight = 0
+    for _, label in ipairs(sorted) do
+        totalHeight = totalHeight + label.AbsoluteSize.Y
+    end
+    RightBorderLine.Size = UDim2.new(0, 3, 0, totalHeight)
+    RightBorderLine.Position = UDim2.new(1, -5, 0, Container.Position.Y.Offset)
+end
 
 function ArrayList.add(name, color)
     if ArrayList.Entries[name] then return end
@@ -30,14 +78,20 @@ function ArrayList.add(name, color)
     Entry.TextColor3 = color or Color3.fromRGB(255, 255, 255)
     Entry.Font = ArrayList.Config.Font
     Entry.TextSize = ArrayList.Config.TextSize
-    Entry.BackgroundTransparency = 0.5
-    Entry.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Entry.BackgroundTransparency = 0.6
+    Entry.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Entry.BorderSizePixel = 0
     Entry.AutomaticSize = Enum.AutomaticSize.XY
     Entry.Parent = Container
     
     ArrayList.Entries[name] = Entry
     ArrayList.Sort()
+    
+    task.spawn(function()
+        task.wait()
+        updateRainbowLine()
+    end)
+    
     return Entry
 end
 
@@ -45,21 +99,23 @@ function ArrayList.Remove(name)
     if ArrayList.Entries[name] then
         ArrayList.Entries[name]:Destroy()
         ArrayList.Entries[name] = nil
+        ArrayList.Sort()
+        updateRainbowLine()
     end
 end
 
 function ArrayList.Sort()
     local sorted = {}
     for name, label in pairs(ArrayList.Entries) do
-        table.insert(sorted, label)
+        table.insert(sorted, {name = name, label = label})
     end
     
     table.sort(sorted, function(a, b)
-        return a.TextBounds.X > b.TextBounds.X
+        return a.label.TextBounds.X > b.label.TextBounds.X
     end)
     
-    for i, label in ipairs(sorted) do
-        label.LayoutOrder = i
+    for i, data in ipairs(sorted) do
+        data.label.LayoutOrder = i
     end
 end
 
