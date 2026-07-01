@@ -2,9 +2,15 @@ local ArrayList = {
     Entries = {},
     Config = {
         Visible = true,
-        Side = "Right",
+        Side = "Right", 
         Font = Enum.Font.BuilderSansMedium,
-        TextSize = 14
+        TextSize = 16,
+        Padding = 0, 
+        BackgroundTransparency = 0.6,
+        BackgroundColor = Color3.fromRGB(15, 15, 15),
+        LineEnabled = true,
+        LineWidth = 3,
+        LineOffset = 5 
     }
 }
 
@@ -12,26 +18,27 @@ local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 ScreenGui.Name = "rat.fun_ArrayList"
 
 local Container = Instance.new("Frame", ScreenGui)
-Container.Size = UDim2.new(0, 220, 1, 0)
-Container.Position = UDim2.new(1, -225, 0, 5)
 Container.BackgroundTransparency = 1
 
-local RightBorderLine = Instance.new("Frame", ScreenGui)
-RightBorderLine.Size = UDim2.new(0, 3, 1, 0)
-RightBorderLine.Position = UDim2.new(1, -5, 0, 0)
-RightBorderLine.BorderSizePixel = 0
-RightBorderLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-RightBorderLine.BackgroundTransparency = 1
+local BorderLine = Instance.new("Frame", ScreenGui)
+BorderLine.BorderSizePixel = 0
+BorderLine.BackgroundTransparency = 1
 
-local UIGradient = Instance.new("UIGradient", RightBorderLine)
+local UIGradient = Instance.new("UIGradient", BorderLine)
 UIGradient.Rotation = 90
 
 local UIListLayout = Instance.new("UIListLayout", Container)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-UIListLayout.Padding = UDim.new(0, 0)
 
-local function updateRainbowLine()
+local function updateLayout()
+    local isRight = (ArrayList.Config.Side == "Right")
+    
+    Container.Size = UDim2.new(0, 220, 1, 0)
+    Container.Position = isRight and UDim2.new(1, -(220 + ArrayList.Config.LineOffset + ArrayList.Config.LineWidth), 0, 5) or UDim2.new(0, ArrayList.Config.LineOffset + ArrayList.Config.LineWidth, 0, 5)
+    
+    UIListLayout.HorizontalAlignment = isRight and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Left
+    UIListLayout.Padding = UDim.new(0, ArrayList.Config.Padding)
+    
     local sorted = {}
     for _, label in pairs(ArrayList.Entries) do
         table.insert(sorted, label)
@@ -40,19 +47,23 @@ local function updateRainbowLine()
         return a.LayoutOrder < b.LayoutOrder
     end)
     
-    if #sorted == 0 then 
-        RightBorderLine.BackgroundTransparency = 1
+    if #sorted == 0 or not ArrayList.Config.LineEnabled then 
+        BorderLine.BackgroundTransparency = 1
         return 
     end
     
-    RightBorderLine.BackgroundTransparency = 0
+    BorderLine.BackgroundTransparency = 0
     local keypoints = {}
     local step = 1 / math.max(#sorted - 1, 1)
     
     for i, label in ipairs(sorted) do
-        local timePos = (i - 1) * step
-        timePos = math.clamp(timePos, 0, 1)
+        local timePos = math.clamp((i - 1) * step, 0, 1)
         table.insert(keypoints, ColorSequenceKeypoint.new(timePos, label.TextColor3))
+        
+        label.Font = ArrayList.Config.Font
+        label.TextSize = ArrayList.Config.TextSize
+        label.BackgroundColor3 = ArrayList.Config.BackgroundColor
+        label.BackgroundTransparency = ArrayList.Config.BackgroundTransparency
     end
     
     if #keypoints == 1 then
@@ -63,10 +74,11 @@ local function updateRainbowLine()
     
     local totalHeight = 0
     for _, label in ipairs(sorted) do
-        totalHeight = totalHeight + label.AbsoluteSize.Y
+        totalHeight = totalHeight + label.AbsoluteSize.Y + ArrayList.Config.Padding
     end
-    RightBorderLine.Size = UDim2.new(0, 3, 0, totalHeight)
-    RightBorderLine.Position = UDim2.new(1, -5, 0, Container.Position.Y.Offset)
+    
+    BorderLine.Size = UDim2.new(0, ArrayList.Config.LineWidth, 0, totalHeight)
+    BorderLine.Position = isRight and UDim2.new(1, -ArrayList.Config.LineOffset, 0, 5) or UDim2.new(0, ArrayList.Config.LineOffset - ArrayList.Config.LineWidth, 0, 5)
 end
 
 function ArrayList.add(name, color)
@@ -76,10 +88,6 @@ function ArrayList.add(name, color)
     Entry.Name = name
     Entry.Text = " " .. name .. " "
     Entry.TextColor3 = color or Color3.fromRGB(255, 255, 255)
-    Entry.Font = ArrayList.Config.Font
-    Entry.TextSize = ArrayList.Config.TextSize
-    Entry.BackgroundTransparency = 0.6
-    Entry.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Entry.BorderSizePixel = 0
     Entry.AutomaticSize = Enum.AutomaticSize.XY
     Entry.Parent = Container
@@ -89,7 +97,7 @@ function ArrayList.add(name, color)
     
     task.spawn(function()
         task.wait()
-        updateRainbowLine()
+        updateLayout()
     end)
     
     return Entry
@@ -100,7 +108,7 @@ function ArrayList.Remove(name)
         ArrayList.Entries[name]:Destroy()
         ArrayList.Entries[name] = nil
         ArrayList.Sort()
-        updateRainbowLine()
+        updateLayout()
     end
 end
 
