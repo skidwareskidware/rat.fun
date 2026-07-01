@@ -10,12 +10,14 @@ local ArrayList = {
         BackgroundColor = Color3.fromRGB(15, 15, 15),
         LineEnabled = true,
         LineWidth = 3,
-        LineOffset = 5 
+        LineOffset = 5,
+        DefaultTextColor = Color3.fromRGB(255, 255, 255),
+        RainbowTextColors = true
     }
 }
 
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-ScreenGui.Name = "Custom_ArrayList_UI"
+ScreenGui.Name = "rat.fun_ArrayList"
 
 local Container = Instance.new("Frame", ScreenGui)
 Container.BackgroundTransparency = 1
@@ -47,17 +49,24 @@ local function updateLayout()
         return a.LayoutOrder < b.LayoutOrder
     end)
     
-    if #sorted == 0 or not ArrayList.Config.LineEnabled then 
+    if #sorted == 0 then 
         BorderLine.BackgroundTransparency = 1
         return 
     end
     
-    BorderLine.BackgroundTransparency = 0
     local keypoints = {}
     local step = 1 / math.max(#sorted - 1, 1)
     
     for i, label in ipairs(sorted) do
         local timePos = math.clamp((i - 1) * step, 0, 1)
+        
+        if ArrayList.Config.RainbowTextColors then
+            local hue = timePos * 0.7
+            label.TextColor3 = Color3.fromHSV(hue, 0.8, 1)
+        else
+            label.TextColor3 = ArrayList.Config.DefaultTextColor
+        end
+        
         table.insert(keypoints, ColorSequenceKeypoint.new(timePos, label.TextColor3))
         
         label.Font = ArrayList.Config.Font
@@ -70,24 +79,28 @@ local function updateLayout()
         table.insert(keypoints, ColorSequenceKeypoint.new(1, keypoints[1].Value))
     end
     
-    UIGradient.Color = ColorSequence.new(keypoints)
-    
-    local totalHeight = 0
-    for _, label in ipairs(sorted) do
-        totalHeight = totalHeight + label.AbsoluteSize.Y + ArrayList.Config.Padding
+    if ArrayList.Config.LineEnabled then
+        BorderLine.BackgroundTransparency = 0
+        UIGradient.Color = ColorSequence.new(keypoints)
+        
+        local totalHeight = 0
+        for _, label in ipairs(sorted) do
+            totalHeight = totalHeight + label.AbsoluteSize.Y + ArrayList.Config.Padding
+        end
+        
+        BorderLine.Size = UDim2.new(0, ArrayList.Config.LineWidth, 0, totalHeight)
+        BorderLine.Position = isRight and UDim2.new(1, -ArrayList.Config.LineOffset, 0, 5) or UDim2.new(0, ArrayList.Config.LineOffset - ArrayList.Config.LineWidth, 0, 5)
+    else
+        BorderLine.BackgroundTransparency = 1
     end
-    
-    BorderLine.Size = UDim2.new(0, ArrayList.Config.LineWidth, 0, totalHeight)
-    BorderLine.Position = isRight and UDim2.new(1, -ArrayList.Config.LineOffset, 0, 5) or UDim2.new(0, ArrayList.Config.LineOffset - ArrayList.Config.LineWidth, 0, 5)
 end
 
-function ArrayList.add(name, color)
+function ArrayList.add(name)
     if ArrayList.Entries[name] then return end
     
     local Entry = Instance.new("TextLabel")
     Entry.Name = name
     Entry.Text = " " .. name .. " "
-    Entry.TextColor3 = color or Color3.fromRGB(255, 255, 255)
     Entry.BorderSizePixel = 0
     Entry.AutomaticSize = Enum.AutomaticSize.XY
     Entry.Parent = Container
